@@ -142,7 +142,12 @@ function load(){
   try{const r=localStorage.getItem("et_v5");if(r)EXP=JSON.parse(r);}catch(_){}
   try{
     const p=new URL(location.href).searchParams,a=parseFloat(p.get("amount")),c=p.get("category");
-    if(a&&!isNaN(a)&&c){EXP.unshift({id:"s"+Date.now(),amt:Math.round(a*100)/100,cat:rc(c),desc:"Via Siri",date:today(),siri:true});save();history.replaceState({},"",location.pathname);}
+    if(a&&!isNaN(a)&&c){
+      const rawDate=p.get("date");
+      let expDate=today();
+      if(rawDate){try{const d=new Date(rawDate);if(!isNaN(d.getTime()))expDate=d.toISOString().split("T")[0];}catch(_){}}
+      EXP.unshift({id:"s"+Date.now(),amt:Math.round(a*100)/100,cat:rc(c),desc:"Via Siri",date:expDate,siri:true});save();history.replaceState({},"",location.pathname);
+    }
   }catch(_){}
 }
 function save(){try{localStorage.setItem("et_v5",JSON.stringify(EXP));}catch(_){}}
@@ -239,7 +244,20 @@ function showPage(p,t){
   document.getElementById("page-"+p).classList.add("active");
   t.classList.add("active");
 }
-load();renderChips();render();
+function checkURLParams(){
+  try{
+    const p=new URL(location.href).searchParams;
+    const a=parseFloat(p.get("amount")),c=p.get("category");
+    if(a&&!isNaN(a)&&c){
+      EXP.unshift({id:"s"+Date.now(),amt:Math.round(a*100)/100,cat:rc(c),desc:"Via Siri",date:today(),siri:true});
+      save();history.replaceState({},"",location.pathname);render();
+    }
+  }catch(_){}
+}
+load();renderChips();render();checkURLParams();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkURLParams();});
+window.addEventListener("pageshow",()=>checkURLParams());
+window.addEventListener("focus",()=>checkURLParams());
 </script>
 </body>
 </html>
