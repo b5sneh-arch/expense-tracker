@@ -185,10 +185,10 @@ body{background:#0C0C0C;color:#F0F0F0;font-family:'Inter',sans-serif;min-height:
 var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymsdYPXrCT4blO1vkyC_RmtpZ_RgtzduSQcwbpt1Src_A9hC3-NX68qjvciKusDBRF/exec";
 
 var CATS = [
-  {n:"Food & Dining", i:"🍽️", c:"#FF6B6B"},
+  {n:"Food & Dining", i:"🍽", c:"#FF6B6B"},
   {n:"Groceries",     i:"🛒", c:"#51CF66"},
   {n:"Transport",     i:"🚗", c:"#339AF0"},
-  {n:"Shopping",      i:"🛍️", c:"#F59F00"},
+  {n:"Shopping",      i:"🛍", c:"#F59F00"},
   {n:"Entertainment", i:"🎬", c:"#CC5DE8"},
   {n:"Health",        i:"💊", c:"#FF8787"},
   {n:"Bills",         i:"⚡", c:"#748FFC"},
@@ -196,19 +196,52 @@ var CATS = [
 ];
 
 var CMAP = {
-  food:"Food & Dining", dining:"Food & Dining", restaurant:"Food & Dining",
-  lunch:"Food & Dining", dinner:"Food & Dining", breakfast:"Food & Dining",
-  groceries:"Groceries", grocery:"Groceries", supermarket:"Groceries",
-  transport:"Transport", uber:"Transport", taxi:"Transport", bus:"Transport",
-  train:"Transport", fuel:"Transport", gas:"Transport", petrol:"Transport",
-  shopping:"Shopping", clothes:"Shopping", amazon:"Shopping",
-  entertainment:"Entertainment", movie:"Entertainment", cinema:"Entertainment", netflix:"Entertainment",
-  health:"Health", pharmacy:"Health", medicine:"Health", doctor:"Health",
-  bills:"Bills", bill:"Bills", electricity:"Bills", internet:"Bills", phone:"Bills", rent:"Bills",
-  other:"Other", misc:"Other"
+  // Food
+  "food":"Food & Dining", "food & dining":"Food & Dining", "dining":"Food & Dining",
+  "restaurant":"Food & Dining", "lunch":"Food & Dining", "dinner":"Food & Dining",
+  "breakfast":"Food & Dining", "eating":"Food & Dining", "cafe":"Food & Dining", "coffee":"Food & Dining",
+  // Groceries
+  "groceries":"Groceries", "grocery":"Groceries", "supermarket":"Groceries",
+  "whole foods":"Groceries", "walmart":"Groceries", "costco":"Groceries",
+  // Transport
+  "transport":"Transport", "transportation":"Transport", "uber":"Transport", "lyft":"Transport",
+  "taxi":"Transport", "bus":"Transport", "train":"Transport", "metro":"Transport",
+  "fuel":"Transport", "gas":"Transport", "petrol":"Transport", "parking":"Transport",
+  // Shopping
+  "shopping":"Shopping", "clothes":"Shopping", "clothing":"Shopping", "amazon":"Shopping",
+  "shop":"Shopping", "retail":"Shopping",
+  // Entertainment
+  "entertainment":"Entertainment", "movie":"Entertainment", "movies":"Entertainment",
+  "cinema":"Entertainment", "netflix":"Entertainment", "spotify":"Entertainment",
+  "games":"Entertainment", "fun":"Entertainment", "subscriptions":"Entertainment",
+  // Health
+  "health":"Health", "pharmacy":"Health", "medicine":"Health", "doctor":"Health",
+  "medical":"Health", "gym":"Health", "fitness":"Health", "dental":"Health",
+  // Bills
+  "bills":"Bills", "bill":"Bills", "electricity":"Bills", "internet":"Bills",
+  "phone":"Bills", "rent":"Bills", "utilities":"Bills", "insurance":"Bills",
+  "subscription":"Bills", "water":"Bills",
+  // Other
+  "other":"Other", "misc":"Other", "miscellaneous":"Other", "general":"Other"
 };
 
-function ci(n) { return CATS.find(function(c){return c.n===n;}) || CATS[7]; }
+function ci(n) {
+  if(!n) return CATS[7];
+  // exact match first
+  var exact = CATS.find(function(c){return c.n===n;});
+  if(exact) return exact;
+  // case-insensitive match
+  var lower = n.toLowerCase().trim();
+  var loose = CATS.find(function(c){return c.n.toLowerCase()===lower;});
+  if(loose) return loose;
+  // partial match
+  var partial = CATS.find(function(c){return c.n.toLowerCase().indexOf(lower)>=0 || lower.indexOf(c.n.toLowerCase().split(" ")[0].toLowerCase())>=0;});
+  if(partial) return partial;
+  // CMAP lookup
+  var mapped = CMAP[lower];
+  if(mapped) return CATS.find(function(c){return c.n===mapped;}) || CATS[7];
+  return CATS[7];
+}
 function rc(r) {
   if(!r) return "Other";
   var k = r.toLowerCase().trim();
@@ -241,10 +274,28 @@ function setStatus(type, msg) {
   el.textContent = msg;
 }
 
+function jsonp(url) {
+  return new Promise(function(resolve, reject) {
+    var cb = "cb_" + Date.now();
+    var script = document.createElement("script");
+    script.src = url + "&callback=" + cb;
+    window[cb] = function(data) {
+      delete window[cb];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.onerror = function() {
+      delete window[cb];
+      document.body.removeChild(script);
+      reject(new Error("JSONP failed"));
+    };
+    document.body.appendChild(script);
+  });
+}
+
 function fetchExpenses() {
   setStatus("loading", "↻ syncing...");
-  fetch(SCRIPT_URL + "?action=read")
-    .then(function(r){ return r.json(); })
+  jsonp(SCRIPT_URL + "?action=read")
     .then(function(d){
       if(d.status === "ok") {
         EXP = d.expenses;
@@ -265,7 +316,7 @@ function writeExpense(amt, cat, desc, date) {
     "&category=" + encodeURIComponent(cat) +
     "&notes=" + encodeURIComponent(desc || "") +
     "&date=" + encodeURIComponent(date || today());
-  return fetch(url).then(function(r){ return r.json(); });
+  return jsonp(url);
 }
 
 function render() {
