@@ -134,9 +134,6 @@ body{background:#0C0C0C;color:#F0F0F0;font-family:'Inter',sans-serif;min-height:
     <div class="modal-title">Add Expense</div>
     <input class="finput famtinput" type="number" id="fAmt" placeholder="0.00" min="0" step="0.01">
     <div class="cat-grid" id="catGrid"></div>
-    <div id="customCatWrap" style="display:none;margin-bottom:12px">
-      <input class="finput" type="text" id="fCustomCat" placeholder="Type custom category e.g. Visa Fee, Taxes…" style="margin-bottom:0">
-    </div>
     <input class="finput" type="text" id="fDesc" placeholder="Description (optional)">
     <input class="finput" type="date" id="fDate">
     <button class="sbtn" id="addBtn" onclick="addExpense()">Add Expense</button>
@@ -211,8 +208,8 @@ function ci(raw) {
     return low.indexOf(c.n.toLowerCase().split(" ")[0].toLowerCase()) >= 0;
   });
   if(partial2) return partial2;
-  // 6. Unknown custom category — give it a consistent teal colour
-  return {n:raw, i:"🏷", c:"#20C997"};
+  // Unknown — fall back to Other
+  return CATS[CATS.length-1];
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
@@ -529,30 +526,16 @@ function renderChips() {
       '<span class="chip-name">'+c.n.split(" ")[0]+'</span>' +
       '</div>';
   });
-  // Custom chip
-  h += '<div class="chip'+(SEL==="__custom__"?" on":"")+'" onclick="selCat(\'__custom__\')">' +
-    '<span class="chip-icon">✏️</span>' +
-    '<span class="chip-name">Custom</span>' +
-    '</div>';
   document.getElementById("catGrid").innerHTML = h;
-  document.getElementById("customCatWrap").style.display = SEL==="__custom__" ? "block" : "none";
 }
-function selCat(n) {
-  SEL = n;
-  renderChips();
-  if(n==="__custom__") setTimeout(function(){ document.getElementById("fCustomCat").focus(); }, 50);
-}
+function selCat(n) { SEL=n; renderChips(); }
 
 function addExpense() {
   var a = parseFloat(document.getElementById("fAmt").value);
   if(!a||isNaN(a)||a<=0) return;
   var desc = document.getElementById("fDesc").value.trim();
   var date = document.getElementById("fDate").value || today();
-  // Resolve category — use custom text if Custom chip selected
   var cat = SEL;
-  if(SEL === "__custom__") {
-    cat = document.getElementById("fCustomCat").value.trim() || "Other";
-  }
   var btn = document.getElementById("addBtn");
   btn.disabled=true; btn.textContent="Saving…";
   setStatus("loading","↻ saving...");
