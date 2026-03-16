@@ -247,7 +247,10 @@ function rc(r) {
   var k = r.toLowerCase().trim();
   return CMAP[k] || (CATS.find(function(c){return c.n.toLowerCase().indexOf(k)>=0;}) || {n:"Other"}).n;
 }
-function today() { return new Date().toISOString().split("T")[0]; }
+function today() {
+  var d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
 function fa(n) { return "$" + parseFloat(n||0).toFixed(2); }
 function fd(s) {
   if(!s) return "";
@@ -397,7 +400,8 @@ function render() {
   var tdi = new Date().getDay()===0 ? 6 : new Date().getDay()-1;
   var dv = days.map(function(_,i){
     var d=new Date(twb.s); d.setDate(twb.s.getDate()+i);
-    var ds=d.toISOString().split("T")[0];
+    // Use local date string to avoid UTC timezone shift
+    var ds = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
     return EXP.filter(function(e){return e.date===ds;}).reduce(function(t,e){return t+parseFloat(e.amt||0);},0);
   });
   DL = new Chart(document.getElementById("dailyChart").getContext("2d"), {
@@ -425,7 +429,8 @@ function render() {
   var tl=[], tv=[];
   for(var i=29; i>=0; i--) {
     var d=new Date(); d.setDate(d.getDate()-i);
-    var ds=d.toISOString().split("T")[0];
+    // Use local date string to avoid UTC timezone shift
+    var ds = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
     tl.push(i%7===0 ? d.toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "");
     tv.push(EXP.filter(function(e){return e.date===ds;}).reduce(function(t,e){return t+parseFloat(e.amt||0);},0));
   }
@@ -561,8 +566,19 @@ function handleSiriURL() {
     var a = parseFloat(p.get("amount")), c = p.get("category");
     if(a && !isNaN(a) && c) {
       history.replaceState({}, "", location.pathname);
-      setStatus("loading", "↻ logging via Siri...");
-      writeExpense(a, rc(c), "Via Siri", today()).then(function(){ fetchExpenses(); });
+      // Show full-screen overlay so user sees confirmation
+      var overlay = document.createElement("div");
+      overlay.style.cssText = "position:fixed;inset:0;background:#0C0C0C;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:'Inter',sans-serif";
+      overlay.innerHTML =
+        '<div style="font-size:48px;margin-bottom:16px">✓</div>' +
+        '<div style="font-size:22px;font-weight:700;color:#F0B429;margin-bottom:8px">Logged!</div>' +
+        '<div style="font-size:16px;color:#888">$' + parseFloat(a).toFixed(2) + ' · ' + rc(c) + '</div>' +
+        '<div style="font-size:12px;color:#444;margin-top:24px">Closing Safari…</div>';
+      document.body.appendChild(overlay);
+      // Write to Sheets then close Safari
+      writeExpense(a, rc(c), "Via Siri", today()).then(function() {
+        setTimeout(function() { window.close(); }, 1200);
+      });
       return;
     }
   } catch(_) {}
