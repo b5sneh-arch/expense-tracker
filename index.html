@@ -153,6 +153,7 @@ var CATS = [
   {n:"Entertainment", i:"🎬", c:"#CC5DE8"},
   {n:"Health",        i:"💊", c:"#FF8787"},
   {n:"Bills",         i:"⚡", c:"#748FFC"},
+  {n:"Subscriptions", i:"🔄", c:"#F06595"},
   {n:"Fees & Taxes",  i:"🧾", c:"#20C997"},
   {n:"Other",         i:"📦", c:"#868E96"}
 ];
@@ -179,7 +180,11 @@ var CMAP = {
   "bills":"Bills","bill":"Bills","electricity":"Bills","internet":"Bills",
   "phone":"Bills","rent":"Bills","utilities":"Bills","insurance":"Bills",
   "subscription":"Bills","water":"Bills","wifi":"Bills","mobile":"Bills",
-  "fees & taxes":"Fees & Taxes","fees and taxes":"Fees & Taxes",
+  "subscriptions":"Subscriptions","subscription":"Subscriptions",
+  "netflix":"Subscriptions","spotify":"Subscriptions","apple":"Subscriptions",
+  "hulu":"Subscriptions","disney":"Subscriptions","youtube":"Subscriptions",
+  "amazon prime":"Subscriptions","prime":"Subscriptions","icloud":"Subscriptions",
+  "software":"Subscriptions","app":"Subscriptions","saas":"Subscriptions","fees and taxes":"Fees & Taxes",
   "tax":"Fees & Taxes","taxes":"Fees & Taxes","fee":"Fees & Taxes","fees":"Fees & Taxes",
   "visa":"Fees & Taxes","visa fee":"Fees & Taxes","government":"Fees & Taxes",
   "fine":"Fees & Taxes","penalty":"Fees & Taxes","duty":"Fees & Taxes","customs":"Fees & Taxes",
@@ -321,12 +326,19 @@ function writeExpense(amt, cat, desc, date) {
 function render() {
   var now = new Date();
   var todayStr = today();
+  var yesterdayDate = new Date(now); yesterdayDate.setDate(now.getDate()-1);
+  var yesterdayStr = localDate(yesterdayDate);
   document.getElementById("monthLbl").textContent = now.toLocaleDateString("en-US",{month:"long",year:"numeric"});
 
   var wb  = getWeekBounds(0);
   var lwb = getWeekBounds(-1);
 
-  var tE  = EXP.filter(function(e){ return e.date === todayStr; });
+  // Today = expenses matching today's local date OR yesterday if before 6am (handles overnight timezone edge)
+  var tE = EXP.filter(function(e){
+    if(e.date === todayStr) return true;
+    if(now.getHours() < 6 && e.date === yesterdayStr) return true;
+    return false;
+  });
   var twE = EXP.filter(function(e){ return inR(e.date, wb); });
   var lwE = EXP.filter(function(e){ return inR(e.date, lwb); });
   var mE  = EXP.filter(function(e){ return sameMonth(e.date, now); });
